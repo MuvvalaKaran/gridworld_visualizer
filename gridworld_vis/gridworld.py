@@ -23,7 +23,7 @@ CSS_STYLES = """
       stroke-width: 2;
       stroke: grey;
       animation: blinker 4s linear infinite;
-      animation: move 5s ease forwards;
+      animation: move 3s ease forwards;
     }
     @keyframes blinker {
        50% {
@@ -31,6 +31,17 @@ CSS_STYLES = """
        }
     }
 """
+
+def create_arrow_marker(dwg):
+    #   <defs>
+    #     <marker id="arrow" markerWidth="10" markerHeight="10" refX="0" refY="3" orient="auto" markerUnits="strokeWidth">
+    #       <path d="M0,0 L0,6 L9,3 z" fill="#f00" />
+    #     </marker>
+    #   </defs>
+    arrow = dwg.marker(id='arrow', insert=(0, 3), size=(10, 10), orient='auto', markerUnits='strokeWidth')
+    arrow.add(dwg.path(d='M0,0 L0,6 L9,3 z', fill='#f00'))
+    dwg.defs.add(arrow)
+    return arrow
 
 
 def draw_board(n=3, tile2classes=None):
@@ -51,6 +62,15 @@ def draw_board(n=3, tile2classes=None):
             kwargs["class_"] = tile2classes(x, n - y - 1)
 
         dwg.add(dwg.rect(**kwargs))
+
+        # Label this box #1
+        # dwg.add(dwg.text(f'l{n**2 - (n*x + y)}',
+        #     insert=(f"{x+ 0.55}cm",f"{y + 0.55}cm"),
+        #     stroke='none',
+        #     # fill=svgwrite.rgb(15, 15, 15, '%'),
+        #     font_size='15px',
+        #     # font_weight="bold"
+        #     ))
 
     return dwg
 
@@ -75,13 +95,14 @@ def move_keyframe(dx, dy, ratio):
 }}"""
 
 
-def gridworld(n=10, actions=None, tile2classes=None, extra_css=""):
+def gridworld(n=10, actions=None, tile2classes=None, extra_css="", init_pos: tuple=(2, 3)):
+    # Draw the Square board
     dwg = draw_board(n=n, tile2classes=tile2classes)
 
     css_styles = CSS_STYLES
     if actions is not None:
         # Add agent.
-        x, y = 2, 3  # start position.
+        x, y = init_pos  # start position.
         cx, cy = x + 0.55, (n - y - 1) + 0.55
         dwg.add(svgwrite.shapes.Circle(
             r="0.3cm",
@@ -90,6 +111,12 @@ def gridworld(n=10, actions=None, tile2classes=None, extra_css=""):
         ))
 
         offsets = gen_offsets(actions)
+        # for x, y in offsets:
+        #     dwg.add(dwg.path(d=f'M{x + 0.55},{(n - y - 1) + 0.55}, {x},{y}',
+        #                     stroke="#000",
+        #                     fill="none",
+        #                     stroke_width=1))
+
         keyframes = [move_keyframe(x, y, (i+1)/len(actions)) for i, (x, y)
                      in enumerate(offsets)]
         move_css = "\n@keyframes move {\n" + '\n'.join(keyframes) + "\n}"
@@ -116,4 +143,4 @@ if __name__== '__main__':
 
     actions = [E, N, N, N, N, W, W, W]
     dwg = gridworld(n=8, tile2classes=tile2classes, actions=actions)
-    dwg.saveas("example.svg", pretty=True)
+    dwg.saveas("./example.svg", pretty=True)
